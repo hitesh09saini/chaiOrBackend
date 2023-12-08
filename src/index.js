@@ -1,20 +1,27 @@
-import dotenv from 'dotenv'
+import * as dotenv from 'dotenv'
 import connectDB from './db/index.js'
+import { app } from './app.js'
+import userRouter from './routes/user.routes.js'
+
+dotenv.config();
 
 
-dotenv.config({
-    path: './env'
-})
 app.on("err", (err) => {
     console.log("error: ", err);
     throw err;
 })
 
+
+// routes
+
+app.use('/api/v1/user', userRouter);
+
+
 connectDB()
     .then(
         () => {
             app.listen(process.env.PORT || 8000, () => {
-                console.log(`Server is running at port : ${process.env.PORT}`);
+                console.log(`Server is running at port : http://localhost:${process.env.PORT}`);
             })
         }
     )
