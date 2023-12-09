@@ -1,7 +1,6 @@
 import * as dotenv from 'dotenv'
 import connectDB from './db/index.js'
 import { app } from './app.js'
-import userRouter from './routes/user.routes.js'
 
 dotenv.config();
 
@@ -10,12 +9,6 @@ app.on("err", (err) => {
     console.log("error: ", err);
     throw err;
 })
-
-
-// routes
-
-app.use('/api/v1/user', userRouter);
-
 
 connectDB()
     .then(
