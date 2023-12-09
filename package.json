@@ -1,12 +1,13 @@
 {
-  "name": "cls",
+  "name": "Api",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "start": "nodemon src/index.js",
-    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js"
+    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
+    "build": "npm install"
   },
   "author": "",
   "license": "ISC",
