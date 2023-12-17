@@ -1,10 +1,10 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
-import {ApiError} from '../utils/apiError.js'
-import { User} from "../models/user.model.js"
-import {uploadOnCloudinary} from "../utils/cloudinary.js"
+import { ApiError } from '../utils/apiError.js'
+import { User } from "../models/user.model.js"
+import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/apiResponse.js";
 
-const registerUser = asyncHandler( async (req, res) => {
+const registerUser = asyncHandler(async (req, res) => {
     // get user details from frontend
     // validation - not empty
     // check if user already exists: username, email
@@ -16,8 +16,8 @@ const registerUser = asyncHandler( async (req, res) => {
     // return res
 
 
-    const {fullName, email, username, password } = req.body
-    //console.log("email: ", email);
+    const { fullName, email, username, password } = req.body
+
 
     if (
         [fullName, email, username, password].some((field) => field?.trim() === "")
@@ -41,7 +41,7 @@ const registerUser = asyncHandler( async (req, res) => {
     if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
         coverImageLocalPath = req.files.coverImage[0].path
     }
-    
+
 
     if (!avatarLocalPath) {
         throw new ApiError(400, "Avatar file is required")
@@ -53,13 +53,13 @@ const registerUser = asyncHandler( async (req, res) => {
     if (!avatar) {
         throw new ApiError(400, "Avatar file is required")
     }
-   
+
 
     const user = await User.create({
         fullName,
         avatar: avatar.url,
         coverImage: coverImage?.url || "",
-        email, 
+        email,
         password,
         username: username.toLowerCase()
     })
@@ -76,9 +76,95 @@ const registerUser = asyncHandler( async (req, res) => {
         new ApiResponse(200, createdUser, "User registered Successfully")
     )
 
-} )
+})
+
+
+const login = asyncHandler(async (req, res) => {
+    // get user details validate from frontend
+    // check user is exist  if not then return error 
+    // check password
+    // generate new access and refresh token and set in user
+    // save user in db
+    // store in cookie 
+    // send responce for success
+
+    const { email, password, username } = req.body;
+
+    if (!email || !username || !password) {
+        throw new ApiError(400, "All fields are required")
+    }
+
+    const userExist = await User.findOne({
+        $or: [{ email }, { username }]
+    })
+
+    if (!userExist) {
+        throw new ApiError(400, "user does not exist")
+    }
+
+    const passExist = await userExist.isPasswordCorrect(password);
+
+    if (!passExist) {
+        throw new ApiError(400, "password invalid")
+    }
+
+    const accessToken = await userExist.generateAccessToken();
+    const refreshToken = await userExist.generateRefreshToken();
+
+    userExist.refreshToken = refreshToken;
+    await userExist.save({ validateBeforeSave: false });
+
+    const loggedInUser = await User.findById(userExist._id).select("-password -refreshToken");
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+    return res.status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(
+            new ApiResponse(
+                200,
+                {
+                    user: loggedInUser, accessToken, refreshToken
+                },
+                "User login Successfully"
+            )
+        )
+})
+
+
+const logout = asyncHandler(async (req, res) => {
+
+    await User.findByIdAndUpdate(req.user._id, {
+        $set: {
+            refreshToken: undefined
+        }
+    }, {
+        new: true
+    }
+    );
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    res.clearCookie('accessToken', options)
+        .clearCookie('refreshToken', options)
+        .status(200).json({
+            success: true,
+            message: 'user logout successfully'
+        })
+
+})
+
+
 
 
 export {
     registerUser,
+    login,
+    logout,
 }
